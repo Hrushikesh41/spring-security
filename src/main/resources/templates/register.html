@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Register</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        .register-form { max-width: 300px; margin: auto; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <div class="register-form">
+        <h2>Register</h2>
+        <form id="registerForm">
+            <div>
+                <label>Username:</label>
+                <input type="text" id="username" required/>
+            </div>
+            <div>
+                <label>Password:</label>
+                <input type="password" id="password" required/>
+            </div>
+            <div>
+                <label>Role:</label>
+                <select id="role">
+                    <option value="USER">User</option>
+                    <option value="ADMIN">Admin</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit">Register</button>
+            </div>
+            <div class="error" id="error"></div>
+            <div class="success" id="success"></div>
+        </form>
+        <p><a th:href="@{/login}">Back to Login</a></p>
+        <button id="logoutButton" style="display: none;">Logout</button>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+            const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password, role })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    errorDiv.textContent = '';
+                    successDiv.textContent = 'Registration successful!';
+                    localStorage.setItem('jwt', data.token);
+                    document.getElementById('logoutButton').style.display = 'block';
+                    if (role === 'ADMIN') {
+                        window.location.href = '/admin-page';
+                    } else {
+                        window.location.href = '/user';
+                    }
+                } else {
+                    errorDiv.textContent = data.message || 'Registration failed';
+                    successDiv.textContent = '';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Error: ' + err.message;
+                successDiv.textContent = '';
+            }
+        });
+
+        document.getElementById('logoutButton').addEventListener('click', async () => {
+            const token = localStorage.getItem('jwt');
+            const errorDiv = document.getElementById('error');
+
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                if (response.ok) {
+                    localStorage.removeItem('jwt');
+                    window.location.href = '/login';
+                } else {
+                    errorDiv.textContent = 'Logout failed: ' + response.status;
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Logout error: ' + err.message;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Login</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        .login-form { max-width: 300px; margin: auto; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <div class="login-form">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <div>
+                <label>Username:</label>
+                <input type="text" id="username" required/>
+            </div>
+            <div>
+                <label>Password:</label>
+                <input type="password" id="password" required/>
+            </div>
+            <div>
+                <button type="submit">Login</button>
+            </div>
+            <div class="error" id="error"></div>
+            <div class="success" id="success"></div>
+        </form>
+        <p><a th:href="@{/register}">Register</a></p>
+        <button id="testAdmin" style="display: none;">Test Admin</button>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    errorDiv.textContent = '';
+                    successDiv.textContent = 'Login successful! Redirecting...';
+                    localStorage.setItem('jwt', data.token);
+                    document.getElementById('testAdmin').style.display = 'block';
+
+                    // Check if user is admin
+                    const adminResponse = await fetch('/admin', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': 'Bearer ' + data.token
+                        }
+                    });
+                    if (adminResponse.ok) {
+                        window.location.href = '/admin-page';
+                    } else {
+                        window.location.href = '/user';
+                    }
+                } else {
+                    errorDiv.textContent = data.message || 'Login failed';
+                    successDiv.textContent = '';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Error: ' + err.message;
+                successDiv.textContent = '';
+            }
+        });
+
+        document.getElementById('testAdmin').addEventListener('click', async () => {
+            const token = localStorage.getItem('jwt');
+            const errorDiv = document.getElementById('error');
+            const successDiv = document.getElementById('success');
+
+            if (!token) {
+                errorDiv.textContent = 'No JWT found. Please login again.';
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.text();
+                    successDiv.textContent = 'Admin access: ' + result;
+                    errorDiv.textContent = '';
+                } else {
+                    errorDiv.textContent = 'Admin access failed: ' + response.status;
+                    successDiv.textContent = '';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Error accessing admin: ' + err.message;
+                successDiv.textContent = '';
+            }
+        });
+    </script>
+</body>
+</html>

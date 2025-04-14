@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Admin Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <div>
+        <h2>Admin Dashboard</h2>
+        <div id="adminContent" class="success"></div>
+        <div id="error" class="error"></div>
+        <button id="logoutButton">Logout</button>
+    </div>
+
+    <script>
+        (async () => {
+            const token = localStorage.getItem('jwt');
+            const adminContent = document.getElementById('adminContent');
+            const errorDiv = document.getElementById('error');
+
+            if (!token) {
+                errorDiv.textContent = 'No JWT found. Please login.';
+                adminContent.textContent = '';
+                return;
+            }
+
+            try {
+                const response = await fetch('/admin', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.text();
+                    adminContent.textContent = result;
+                    errorDiv.textContent = '';
+                } else {
+                    errorDiv.textContent = 'Access denied: ' + response.status;
+                    adminContent.textContent = '';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Error: ' + err.message;
+                adminContent.textContent = '';
+            }
+        })();
+
+        document.getElementById('logoutButton').addEventListener('click', async () => {
+            const token = localStorage.getItem('jwt');
+            const errorDiv = document.getElementById('error');
+
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            try {
+                const response = await fetch('/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                if (response.ok) {
+                    localStorage.removeItem('jwt');
+                    window.location.href = '/login';
+                } else {
+                    errorDiv.textContent = 'Logout failed: ' + response.status;
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Logout error: ' + err.message;
+            }
+        });
+    </script>
+</body>
+</html>
